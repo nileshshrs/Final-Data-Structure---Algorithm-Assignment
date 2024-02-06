@@ -52,7 +52,7 @@ public class Question2a {
         for (int dress : input) {
             double difference = dress - target;// to make sure if the work divided within each machine is equal can be
                                                // negative, in this case we turn it into positive i guess ?
-            difference = Math.ceil(difference); // to get
+            difference = Math.abs(difference); // to get
             System.out.println("dress before change " + dress);
             System.out.println(dress + "-" + target + "=" + difference);
             moves += Math.abs(difference);
