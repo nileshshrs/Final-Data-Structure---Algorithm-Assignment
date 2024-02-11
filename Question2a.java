@@ -21,54 +21,45 @@
 // 6. Move 5: Pass one dress from the fourth sewing machine to the third sewing machine, resulting in [3, 3, 1, 0, 1]
 // After these 5 moves, the number of dresses in each sewing machine is equalized to 1. Therefore, the minimum number of 
 // moves required to equalize the number of dresses is 5.
+class MinMovesToEqualizeDresses {
 
-public class Question2a {
+    public static int minMovesToEqualizeDresses(int[] dresses) {
+        int n = dresses.length;
 
-    // input as an arguements is dresses here
-    // machines we have is 5
-    // according to what question says we can pass a dress from 1 to 5 in an
-    // iterative way so 1 => 2, 2=>3 and so on till 5 since (1<=m<=n)
-    // n is number of sewing machines i.e. 5 and m is moves
-    public int movesToEqualize(int[] input) {
-        int totaldresses = 0; // this is required so to help check if we can make all the sewing machines have
-                              // equal number of dresses
-        int n = input.length;
-
-        for (int dress : input) {
-            totaldresses += dress; // foreach loop to get total number of dresses out of the array of dresses
+        // Calculate the total number of dresses
+        int totalDresses = 0;
+        for (int dress : dresses) {
+            totalDresses += dress;
         }
 
-        if (totaldresses % n != 0) {
-            return -1; // this is needed so we know if the dresses can be divided equally
-            // into machines if it gives -1 that means there is no optimal solution
+        // Check if it's possible to equalize the dresses
+        if (totalDresses % n != 0) {
+            return -1;
         }
 
-        // the code block after if block will not run but if we run it it will result
-        // after commenting the if block but the output wont be 5
+        // Calculate the target number of dresses for each machine
+        int targetDresses = totalDresses / n;
 
         int moves = 0;
-        int target = totaldresses / n;
+        int currentSum = 0;
 
-        for (int dress : input) {
-            double difference = dress - target;// to make sure if the work divided within each machine is equal can be
-                                               // negative, in this case we turn it into positive i guess ?
-            difference = Math.abs(difference); // to get
-            System.out.println("dress before change " + dress);
-            System.out.println(dress + "-" + target + "=" + difference);
-            moves += Math.abs(difference);
+        // Iterate through the machines and calculate moves
+        for (int i = 0; i < n; i++) {
+            // Calculate the difference between the current machine's dresses and the target
+            int diff = dresses[i] - targetDresses;
+            currentSum += diff;
+
+            // Update the moves with the absolute value of the current sum
+            moves += Math.abs(currentSum);
         }
 
         return moves;
     }
 
     public static void main(String[] args) {
-        int[] dresses = { 2, 1, 3, 0, 3 }; // if you add another 3 then it would be divided equally i think with results
-                                           // being {0,1,0,2,1,1} for the optimal solution though it feels iffy ish~~~
-                                           // with moves required being 6
-        Question2a q = new Question2a();
-        int result = q.movesToEqualize(dresses);
-
-        System.out.println(result);// result is 6 instead of 5 because totaldress % n is not equal to 0
+        // Example usage:
+        int[] inputDresses = {1, 0, 5};
+        int outputMoves = minMovesToEqualizeDresses(inputDresses);
+        System.out.println(outputMoves);
     }
-
 }
