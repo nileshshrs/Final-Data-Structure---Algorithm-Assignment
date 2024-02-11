@@ -15,46 +15,49 @@ import java.util.concurrent.Executors;
 
 class ExtendedSwingFrame extends JFrame {
 
-    private JTextField textField;
-    private JButton addUrlButton;
-    private JButton downloadButton;
-    private JButton clearUrlButton; // Added clear URL button
-    private JPanel progressBarPanel;
+    private JTextField textField; // Text field for entering image URLs
+    private JButton addUrlButton; // Button to add image URLs to the list
+    private JButton downloadButton; // Button to start downloading images
+    private JButton clearUrlButton; // Button to clear the list of image URLs
+    private JPanel progressBarPanel; // Panel to display progress bars for each image
 
-    private ExecutorService executorService;
-    private List<String> urlList;
-    private List<JProgressBar> progressBars;
-    private List<SwingWorker<Void, Integer>> workers;
+    private ExecutorService executorService; // Thread pool for managing concurrent downloads
+    private List<String> urlList; // List to store image URLs
+    private List<JProgressBar> progressBars; // List to store progress bars for each image
+    private List<SwingWorker<Void, Integer>> workers; // List to store SwingWorkers for each download
 
+    // Constructor for the ExtendedSwingFrame class
     public ExtendedSwingFrame() {
         setTitle("Extended Swing Frame");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel(); // Main panel containing UI components
 
-        textField = new JTextField(20);
-        addUrlButton = new JButton("Add URL");
-        downloadButton = new JButton("Download Images");
-        clearUrlButton = new JButton("Clear URLs"); // Initialize clear URL button
-        progressBarPanel = new JPanel(new GridLayout(0, 1));
+        textField = new JTextField(20); // Text field to enter image URLs
+        addUrlButton = new JButton("Add URL"); // Button to add image URLs
+        downloadButton = new JButton("Download Images"); // Button to start downloading images
+        clearUrlButton = new JButton("Clear URLs"); // Button to clear the list of image URLs
+        progressBarPanel = new JPanel(new GridLayout(0, 1)); // Panel to display progress bars
 
-        urlList = new ArrayList<>();
-        progressBars = new ArrayList<>();
-        workers = new ArrayList<>();
+        urlList = new ArrayList<>(); // Initialize the list to store image URLs
+        progressBars = new ArrayList<>(); // Initialize the list to store progress bars
+        workers = new ArrayList<>(); // Initialize the list to store SwingWorkers
 
+        // ActionListener for the "Add URL" button
         addUrlButton.addActionListener(e -> {
-            String imageUrl = textField.getText();
+            String imageUrl = textField.getText(); // Get the URL from the text field
             if (!imageUrl.isEmpty()) {
-                urlList.add(imageUrl);
-                textField.setText("");
-                addProgressBar(urlList.size());
+                urlList.add(imageUrl); // Add the URL to the list
+                textField.setText(""); // Clear the text field
+                addProgressBar(urlList.size()); // Add a progress bar for the new URL
             }
         });
 
+        // ActionListener for the "Download Images" button
         downloadButton.addActionListener(e -> {
             if (!urlList.isEmpty()) {
                 for (int i = 0; i < urlList.size(); i++) {
-                    downloadImage(urlList.get(i), progressBars.get(i), i + 1);
+                    downloadImage(urlList.get(i), progressBars.get(i), i + 1); // Download each image concurrently
                 }
             } else {
                 JOptionPane.showMessageDialog(this,
@@ -63,47 +66,51 @@ class ExtendedSwingFrame extends JFrame {
             }
         });
 
+        // ActionListener for the "Clear URLs" button
         clearUrlButton.addActionListener(e -> {
-            urlList.clear();
-            progressBars.clear();
-            progressBarPanel.removeAll();
-            progressBarPanel.revalidate();
-            progressBarPanel.repaint();
+            urlList.clear(); // Clear the list of image URLs
+            progressBars.clear(); // Clear the list of progress bars
+            progressBarPanel.removeAll(); // Remove progress bars from the panel
+            progressBarPanel.revalidate(); // Revalidate the panel to reflect changes
+            progressBarPanel.repaint(); // Repaint the panel
         });
 
+        // Add UI components to the main panel
         panel.add(new JLabel("Image URL:"));
         panel.add(textField);
         panel.add(addUrlButton);
         panel.add(downloadButton);
-        panel.add(clearUrlButton); // Add clear URL button to the panel
+        panel.add(clearUrlButton);
         panel.add(progressBarPanel);
 
-        getContentPane().add(panel);
+        getContentPane().add(panel); // Add the main panel to the frame
 
-        setSize(400, 300);
-        setVisible(true);
+        setSize(400, 300); // Set the size of the frame
+        setVisible(true); // Make the frame visible
 
         // Use a fixed thread pool with a maximum of 10 threads
         executorService = Executors.newFixedThreadPool(10);
     }
 
+    // Method to add a progress bar for a new image
     private void addProgressBar(int imageNumber) {
-        JLabel label = new JLabel("Image " + imageNumber + ": ");
-        JProgressBar progressBar = new JProgressBar(0, 100);
-        progressBar.setStringPainted(true);
+        JLabel label = new JLabel("Image " + imageNumber + ": "); // Label to identify the image
+        JProgressBar progressBar = new JProgressBar(0, 100); // Progress bar for the image
+        progressBar.setStringPainted(true); // Show the progress as a string
 
-        JPanel progressBarPanel = new JPanel(new BorderLayout());
-        progressBarPanel.add(label, BorderLayout.WEST);
-        progressBarPanel.add(progressBar, BorderLayout.CENTER);
+        JPanel progressBarPanel = new JPanel(new BorderLayout()); // Panel for the progress bar
+        progressBarPanel.add(label, BorderLayout.WEST); // Add label to the left
+        progressBarPanel.add(progressBar, BorderLayout.CENTER); // Add progress bar to the center
 
-        this.progressBarPanel.add(progressBarPanel);
+        this.progressBarPanel.add(progressBarPanel); // Add the progress bar panel to the main panel
 
-        progressBars.add(progressBar);
+        progressBars.add(progressBar); // Add the progress bar to the list
 
-        revalidate();
-        repaint();
+        revalidate(); // Revalidate the frame to reflect changes
+        repaint(); // Repaint the frame
     }
 
+    // Method to download an image
     private void downloadImage(String imageUrl, JProgressBar progressBar, int imageNumber) {
         SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
             @Override
@@ -205,6 +212,7 @@ class ExtendedSwingFrame extends JFrame {
         });
     }
 
+    // Method to check if a URL is valid
     private boolean isValidUrl(String urlString) {
         try {
             new URL(urlString).toURI();
@@ -214,6 +222,7 @@ class ExtendedSwingFrame extends JFrame {
         }
     }
 
+    // Method to generate a dynamic file name to avoid conflicts
     private String getDynamicFileName(String directory, String fileName) {
         String baseName = fileName.substring(0, Math.min(fileName.lastIndexOf('.'), 255));
         String extension = fileName.substring(fileName.lastIndexOf('.'));
@@ -228,6 +237,7 @@ class ExtendedSwingFrame extends JFrame {
         return filePath.getFileName().toString();
     }
 
+    // Method to show an error message in a dialog
     private void showError(String message, String imageUrl) {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(this,
@@ -236,6 +246,7 @@ class ExtendedSwingFrame extends JFrame {
         });
     }
 
+    // Main method to launch the application
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new ExtendedSwingFrame());
     }
