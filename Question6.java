@@ -245,9 +245,12 @@ class ExtendedSwingFrame extends JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
         });
     }
+    
 
     // Main method to launch the application
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new ExtendedSwingFrame());
     }
+
+    ///Note: for some reason some image url does not download images no errors, no nothing nada !
 }
