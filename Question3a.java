@@ -76,16 +76,20 @@ class ScoreTracker {
     }
 
     public static void main(String[] args) {
-        ScoreTracker scoreTracker = new ScoreTracker();
+        ScoreTracker st = new ScoreTracker();
 
-        scoreTracker.addScore(85.5); // Stream: [85.5]
-        scoreTracker.addScore(92.3); // Stream: [85.5, 92.3]
-        scoreTracker.addScore(77.8); // Stream: [85.5, 92.3, 77.8]
-        scoreTracker.addScore(90.1); // Stream: [85.5, 92.3, 77.8, 90.1]
-        scoreTracker.addScore(84.1); // Stream: [85.5, 92.3, 77.8, 90.1]
-        System.out.println("first median: " + scoreTracker.getMedianScore());
-        scoreTracker.addScore(81.2); // Stream: [85.5, 92.3, 77.8, 90.1, 81.2]
-        scoreTracker.addScore(88.7); // Stream: [85.5, 92.3, 77.8, 90.1, 81.2, 88.7]
-        System.out.println("second median: " + scoreTracker.getMedianScore());
+        st.addScore(85.5);
+        st.addScore(92.3);
+        st.addScore(77.8);
+
+        double median1 = st.getMedianScore();
+        System.out.println("Median 1: " + median1);
+
+        st.addScore(90.1);
+        st.addScore(81.2);
+        st.addScore(88.7);
+
+        double median2 = st.getMedianScore();
+        System.out.println("Median 2: " + median2);
     }
 }

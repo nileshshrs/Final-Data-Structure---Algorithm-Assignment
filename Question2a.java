@@ -41,16 +41,18 @@ class MinMovesToEqualizeDresses {
         int targetDresses = totalDresses / n;
 
         int moves = 0;
-        int currentSum = 0;
+
 
         // Iterate through the machines and calculate moves
-        for (int i = 0; i < n; i++) {
+        for (int dress : dresses) {
             // Calculate the difference between the current machine's dresses and the target
-            int diff = dresses[i] - targetDresses;
-            currentSum += diff;
+            int diff = dress - targetDresses;
+            if (diff > 0) {
+                moves += diff;
+            }
 
             // Update the moves with the absolute value of the current sum
-            moves += Math.abs(currentSum);
+       
         }
 
         return moves;
@@ -58,7 +60,7 @@ class MinMovesToEqualizeDresses {
 
     public static void main(String[] args) {
         // Example usage:
-        int[] inputDresses = {1, 0, 5};
+        int[] inputDresses = { 1, 0, 5 };
         int outputMoves = minMovesToEqualizeDresses(inputDresses);
         System.out.println(outputMoves);
     }

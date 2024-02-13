@@ -12,52 +12,52 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class ExtendedSwingFrame extends JFrame {
 
-    private JTextField textField; // Text field for entering image URLs
-    private JButton addUrlButton; // Button to add image URLs to the list
-    private JButton downloadButton; // Button to start downloading images
-    private JButton clearUrlButton; // Button to clear the list of image URLs
-    private JPanel progressBarPanel; // Panel to display progress bars for each image
+    private JTextField textField;
+    private JButton addUrlButton;
+    private JButton downloadButton;
+    private JButton clearUrlButton;
+    private JButton cancelButton;
+    private JPanel progressBarPanel;
 
-    private ExecutorService executorService; // Thread pool for managing concurrent downloads
-    private List<String> urlList; // List to store image URLs
-    private List<JProgressBar> progressBars; // List to store progress bars for each image
-    private List<SwingWorker<Void, Integer>> workers; // List to store SwingWorkers for each download
+    private ExecutorService executorService;
+    private List<String> urlList;
+    private List<JProgressBar> progressBars;
+    private List<DownloadWorker> workers;
 
-    // Constructor for the ExtendedSwingFrame class
     public ExtendedSwingFrame() {
         setTitle("Extended Swing Frame");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        JPanel panel = new JPanel(); // Main panel containing UI components
+        JPanel panel = new JPanel();
 
-        textField = new JTextField(20); // Text field to enter image URLs
-        addUrlButton = new JButton("Add URL"); // Button to add image URLs
-        downloadButton = new JButton("Download Images"); // Button to start downloading images
-        clearUrlButton = new JButton("Clear URLs"); // Button to clear the list of image URLs
-        progressBarPanel = new JPanel(new GridLayout(0, 1)); // Panel to display progress bars
+        textField = new JTextField(20);
+        addUrlButton = new JButton("Add URL");
+        downloadButton = new JButton("Download Images");
+        clearUrlButton = new JButton("Clear URLs");
+        cancelButton = new JButton("Cancel All Downloads");
+        progressBarPanel = new JPanel(new GridLayout(0, 1));
 
-        urlList = new ArrayList<>(); // Initialize the list to store image URLs
-        progressBars = new ArrayList<>(); // Initialize the list to store progress bars
-        workers = new ArrayList<>(); // Initialize the list to store SwingWorkers
+        urlList = new ArrayList<>();
+        progressBars = new ArrayList<>();
+        workers = new ArrayList<>();
 
-        // ActionListener for the "Add URL" button
         addUrlButton.addActionListener(e -> {
-            String imageUrl = textField.getText(); // Get the URL from the text field
+            String imageUrl = textField.getText();
             if (!imageUrl.isEmpty()) {
-                urlList.add(imageUrl); // Add the URL to the list
-                textField.setText(""); // Clear the text field
-                addProgressBar(urlList.size()); // Add a progress bar for the new URL
+                urlList.add(imageUrl);
+                textField.setText("");
+                addProgressBar(urlList.size());
             }
         });
 
-        // ActionListener for the "Download Images" button
         downloadButton.addActionListener(e -> {
             if (!urlList.isEmpty()) {
                 for (int i = 0; i < urlList.size(); i++) {
-                    downloadImage(urlList.get(i), progressBars.get(i), i + 1); // Download each image concurrently
+                    downloadImage(urlList.get(i), progressBars.get(i), i + 1);
                 }
             } else {
                 JOptionPane.showMessageDialog(this,
@@ -66,153 +66,236 @@ class ExtendedSwingFrame extends JFrame {
             }
         });
 
-        // ActionListener for the "Clear URLs" button
         clearUrlButton.addActionListener(e -> {
-            urlList.clear(); // Clear the list of image URLs
-            progressBars.clear(); // Clear the list of progress bars
-            progressBarPanel.removeAll(); // Remove progress bars from the panel
-            progressBarPanel.revalidate(); // Revalidate the panel to reflect changes
-            progressBarPanel.repaint(); // Repaint the panel
+            urlList.clear();
+            progressBars.clear();
+            progressBarPanel.removeAll();
+            progressBarPanel.revalidate();
+            progressBarPanel.repaint();
         });
 
-        // Add UI components to the main panel
+        cancelButton.addActionListener(e -> {
+            cancelAllDownloads();
+        });
+
         panel.add(new JLabel("Image URL:"));
         panel.add(textField);
         panel.add(addUrlButton);
         panel.add(downloadButton);
         panel.add(clearUrlButton);
+        panel.add(cancelButton);
         panel.add(progressBarPanel);
 
-        getContentPane().add(panel); // Add the main panel to the frame
+        getContentPane().add(panel);
 
-        setSize(400, 300); // Set the size of the frame
-        setVisible(true); // Make the frame visible
+        setSize(400, 300);
+        setVisible(true);
 
-        // Use a fixed thread pool with a maximum of 10 threads
         executorService = Executors.newFixedThreadPool(10);
     }
 
-    // Method to add a progress bar for a new image
     private void addProgressBar(int imageNumber) {
-        JLabel label = new JLabel("Image " + imageNumber + ": "); // Label to identify the image
-        JProgressBar progressBar = new JProgressBar(0, 100); // Progress bar for the image
-        progressBar.setStringPainted(true); // Show the progress as a string
+        JLabel label = new JLabel("Image " + imageNumber + ": ");
+        JProgressBar progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
 
-        JPanel progressBarPanel = new JPanel(new BorderLayout()); // Panel for the progress bar
-        progressBarPanel.add(label, BorderLayout.WEST); // Add label to the left
-        progressBarPanel.add(progressBar, BorderLayout.CENTER); // Add progress bar to the center
-
-        this.progressBarPanel.add(progressBarPanel); // Add the progress bar panel to the main panel
-
-        progressBars.add(progressBar); // Add the progress bar to the list
-
-        revalidate(); // Revalidate the frame to reflect changes
-        repaint(); // Repaint the frame
-    }
-
-    // Method to download an image
-    private void downloadImage(String imageUrl, JProgressBar progressBar, int imageNumber) {
-        SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                try {
-                    if (!isValidUrl(imageUrl)) {
-                        throw new MalformedURLException("Invalid URL: " + imageUrl);
-                    }
-
-                    URL url = new URL(imageUrl);
-
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    int responseCode = connection.getResponseCode();
-
-                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                        throw new IOException("HTTP error code: " + responseCode);
-                    }
-
-                    String contentType = connection.getContentType();
-                    connection.disconnect();
-
-                    if (contentType == null || !contentType.startsWith("image")) {
-                        throw new IOException("URL does not point to an image: " + imageUrl);
-                    }
-
-                    String fileName = url.getFile();
-                    fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
-                    fileName = fileName.split("\\?")[0];
-
-                    String newFileName = getDynamicFileName(System.getProperty("user.home") + "/Desktop/", fileName);
-                    Path outputPath = Paths.get(System.getProperty("user.home") + "/Desktop/", newFileName);
-
-                    Files.createDirectories(outputPath.getParent());
-
-                    int contentLength = connection.getContentLength();
-                    int totalBytesRead = 0;
-
-                    try (InputStream in = url.openStream();
-                         OutputStream out = Files.newOutputStream(outputPath)) {
-
-                        byte[] buffer = new byte[1024];
-                        int bytesRead;
-
-                        while ((bytesRead = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, bytesRead);
-                            totalBytesRead += bytesRead;
-
-                            int progress = (int) ((double) totalBytesRead / contentLength * 100);
-                            publish(progress);
-                        }
-                    }
-
-                    publish(100);
-                    // Wait until the file is saved to the directory before completing
-                    Files.move(Paths.get(System.getProperty("user.home") + "/Desktop/", fileName),
-                            outputPath, StandardCopyOption.REPLACE_EXISTING);
-
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                    showError("Error downloading image: Invalid URL", imageUrl);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    showError("Error downloading image: " + e.getMessage(), imageUrl);
-                }
-
-                return null;
+        JButton pauseButton = new JButton("Pause");
+        pauseButton.addActionListener(e -> {
+            int workerIndex = findWorkerIndexByProgressBar(progressBar);
+            if (workerIndex != -1) {
+                workers.get(workerIndex).pauseDownload();
             }
-
-            @Override
-            protected void process(List<Integer> chunks) {
-                for (int progress : chunks) {
-                    progressBar.setValue(progress);
-                }
-            }
-
-            @Override
-            protected void done() {
-                // Check if all workers are done
-                boolean allDone = true;
-                for (SwingWorker<Void, Integer> worker : workers) {
-                    if (!worker.isDone()) {
-                        allDone = false;
-                        break;
-                    }
-                }
-                if (allDone) {
-                    // Clear URLs when all downloads are completed
-                    urlList.clear();
-                    JOptionPane.showMessageDialog(ExtendedSwingFrame.this,
-                            "All images downloaded successfully!",
-                            "Success", JOptionPane.INFORMATION_MESSAGE);
-                }
-            }
-        };
-
-        executorService.execute(() -> {
-            worker.execute();
-            workers.add(worker);
         });
+
+        JButton cancelDownloadButton = new JButton("Cancel");
+        cancelDownloadButton.addActionListener(e -> {
+            int workerIndex = findWorkerIndexByProgressBar(progressBar);
+            if (workerIndex != -1) {
+                workers.get(workerIndex).cancel(true);
+                JOptionPane.showMessageDialog(ExtendedSwingFrame.this,
+                        "Download canceled for Image " + imageNumber,
+                        "Canceled", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(pauseButton);
+        buttonPanel.add(cancelDownloadButton);
+
+        JPanel progressBarPanel = new JPanel(new BorderLayout());
+        progressBarPanel.add(label, BorderLayout.WEST);
+        progressBarPanel.add(progressBar, BorderLayout.CENTER);
+        progressBarPanel.add(buttonPanel, BorderLayout.EAST);
+
+        this.progressBarPanel.add(progressBarPanel);
+        progressBars.add(progressBar);
+
+        revalidate();
+        repaint();
+
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        downloadImage(urlList.get(imageNumber - 1), progressBar, imageNumber);
     }
 
-    // Method to check if a URL is valid
+    private void cancelAllDownloads() {
+        if (workers != null && !workers.isEmpty()) {
+            for (DownloadWorker worker : workers) {
+                worker.cancel(true);
+            }
+        }
+    }
+
+    private int findWorkerIndexByProgressBar(JProgressBar progressBar) {
+        for (int i = 0; i < progressBars.size(); i++) {
+            if (progressBars.get(i) == progressBar) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void downloadImage(String imageUrl, JProgressBar progressBar, int imageNumber) {
+        DownloadWorker worker = new DownloadWorker(imageUrl, progressBar, imageNumber);
+        executorService.execute(worker);
+        workers.add(worker);
+    }
+
+    private class DownloadWorker extends SwingWorker<Void, Integer> {
+
+        private final String imageUrl;
+        private final JProgressBar progressBar;
+        private final int imageNumber;
+        private final AtomicBoolean isPaused;
+
+        public DownloadWorker(String imageUrl, JProgressBar progressBar, int imageNumber) {
+            this.imageUrl = imageUrl;
+            this.progressBar = progressBar;
+            this.imageNumber = imageNumber;
+            this.isPaused = new AtomicBoolean(false);
+        }
+
+        public void pauseDownload() {
+            isPaused.set(!isPaused.get());
+            if (isPaused.get()) {
+                JOptionPane.showMessageDialog(ExtendedSwingFrame.this,
+                        "Download paused for Image " + imageNumber,
+                        "Paused", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+
+        @Override
+        protected Void doInBackground() throws Exception {
+            try {
+                if (!isValidUrl(imageUrl)) {
+                    throw new MalformedURLException("Invalid URL: " + imageUrl);
+                }
+
+                URL url = new URL(imageUrl);
+
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                int responseCode = connection.getResponseCode();
+
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    throw new IOException("HTTP error code: " + responseCode);
+                }
+
+                String contentType = connection.getContentType();
+                connection.disconnect();
+
+                if (contentType == null || !contentType.startsWith("image")) {
+                    throw new IOException("URL does not point to an image: " + imageUrl);
+                }
+
+                String fileName = url.getFile();
+                fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+                fileName = fileName.split("\\?")[0];
+
+                String newFileName = getDynamicFileName(System.getProperty("user.home") + "/Desktop/", fileName);
+                Path outputPath = Paths.get(System.getProperty("user.home") + "/Desktop/", newFileName);
+
+                Files.createDirectories(outputPath.getParent());
+
+                int contentLength = connection.getContentLength();
+                int totalBytesRead = 0;
+
+                try (InputStream in = url.openStream();
+                     OutputStream out = Files.newOutputStream(outputPath)) {
+
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        if (isPaused.get()) {
+                            while (isPaused.get()) {
+                                Thread.sleep(50);
+                            }
+                            if (isCancelled()) {
+                                Files.deleteIfExists(outputPath);
+                                throw new InterruptedException();
+                            }
+                        }
+
+                        out.write(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+
+                        int progress = (int) ((double) totalBytesRead / contentLength * 100);
+                        publish(progress);
+                        Thread.sleep(50);
+                    }
+                }
+
+                publish(100);
+                Files.move(Paths.get(System.getProperty("user.home") + "/Desktop/", fileName),
+                        outputPath, StandardCopyOption.REPLACE_EXISTING);
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(ExtendedSwingFrame.this,
+                            "Download interrupted for Image " + imageNumber,
+                            "Interrupted", JOptionPane.WARNING_MESSAGE);
+                });
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                showError("Error downloading image: Invalid URL", imageUrl);
+            } catch (IOException e) {
+                e.printStackTrace();
+                showError("Error downloading image: " + e.getMessage(), imageUrl);
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void process(List<Integer> chunks) {
+            for (int progress : chunks) {
+                progressBar.setValue(progress);
+            }
+        }
+
+        @Override
+        protected void done() {
+            boolean allDone = true;
+            for (DownloadWorker worker : workers) {
+                if (!worker.isDone() || worker.isCancelled()) {
+                    allDone = false;
+                    break;
+                }
+            }
+            if (allDone) {
+                urlList.clear();
+                JOptionPane.showMessageDialog(ExtendedSwingFrame.this,
+                        "All images downloaded successfully!",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
     private boolean isValidUrl(String urlString) {
         try {
             new URL(urlString).toURI();
@@ -222,7 +305,6 @@ class ExtendedSwingFrame extends JFrame {
         }
     }
 
-    // Method to generate a dynamic file name to avoid conflicts
     private String getDynamicFileName(String directory, String fileName) {
         String baseName = fileName.substring(0, Math.min(fileName.lastIndexOf('.'), 255));
         String extension = fileName.substring(fileName.lastIndexOf('.'));
@@ -237,7 +319,6 @@ class ExtendedSwingFrame extends JFrame {
         return filePath.getFileName().toString();
     }
 
-    // Method to show an error message in a dialog
     private void showError(String message, String imageUrl) {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(this,
@@ -245,12 +326,8 @@ class ExtendedSwingFrame extends JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
         });
     }
-    
 
-    // Main method to launch the application
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new ExtendedSwingFrame());
     }
-
-    ///Note: for some reason some image url does not download images no errors, no nothing nada !
 }

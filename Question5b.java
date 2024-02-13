@@ -1,45 +1,97 @@
+
 import java.util.*;
 
-class ISP {
+class Q5B {
+    int[] disc, low;
+    int time = 1;
+    List<List<Integer>> ans = new ArrayList<>();
+    Map<Integer, List<Integer>> edgeMap = new HashMap<>();
 
-    public static List<Integer> findImpactedDevices(int[][] edges, int targetDevice) {
-        Set<Integer> impactedDevices = new HashSet<>();
-        Set<Integer> visited = new HashSet<>();
+    public List<Integer> findImpactedDevices(int n, List<List<Integer>> connections, int targetDevice) {
+        disc = new int[n];
+        low = new int[n];
+        for (int i = 0; i < n; i++)
+            edgeMap.put(i, new ArrayList<Integer>());
+        for (List<Integer> conn : connections) {
+            edgeMap.get(conn.get(0)).add(conn.get(1));
+            edgeMap.get(conn.get(1)).add(conn.get(0));
+        }
+        dfs(targetDevice, -1);
 
-        for (int[] edge : edges) {
-            if (edge[0] == targetDevice || edge[1] == targetDevice) {
-                dfs(edges, edge[0], targetDevice, visited, impactedDevices);
-                dfs(edges, edge[1], targetDevice, visited, impactedDevices);
+        // Check if the target device is a source node in any connection
+        boolean isSourceNode = false;
+        for (List<Integer> conn : connections) {
+            if (conn.get(0) == targetDevice) {
+                isSourceNode = true;
+                break;
             }
         }
 
-        // Remove the target device from the impacted set
-        impactedDevices.remove(targetDevice);
-        return new ArrayList<>(impactedDevices);
+        if (!isSourceNode) {
+            return new ArrayList<>();
+        }
+
+        Set<Integer> impactedDevicesSet = new HashSet<>();
+        for (List<Integer> connection : ans) {
+            int u = connection.get(0);
+            int v = connection.get(1);
+
+            if (u == targetDevice) {
+                impactedDevicesSet.add(v);
+            } else if (v == targetDevice) {
+                impactedDevicesSet.add(u);
+            }
+        }
+
+        Set<Integer> additionalAffectedDevices = new HashSet<>();
+        for (int affectedDevice : impactedDevicesSet) {
+            for (int neighbor : edgeMap.get(affectedDevice)) {
+                if (!impactedDevicesSet.contains(neighbor)) {
+                    additionalAffectedDevices.add(neighbor);
+                }
+            }
+        }
+
+        impactedDevicesSet.addAll(additionalAffectedDevices);
+        impactedDevicesSet.remove(targetDevice);
+
+        return new ArrayList<>(impactedDevicesSet);
     }
 
-    private static void dfs(int[][] edges, int current, int targetDevice, Set<Integer> visited, Set<Integer> impacted) {
-        if (!visited.contains(current)) {
-            visited.add(current);
-
-            for (int[] edge : edges) {
-                if (edge[0] == current && edge[1] != targetDevice) {
-                    dfs(edges, edge[1], targetDevice, visited, impacted);
-                    impacted.add(edge[1]); // Add non-targetDevice neighbor to impacted set
-                } else if (edge[1] == current && edge[0] != targetDevice) {
-                    dfs(edges, edge[0], targetDevice, visited, impacted);
-                    impacted.add(edge[0]); // Add non-targetDevice neighbor to impacted set
-                }
+    public void dfs(int curr, int prev) {
+        disc[curr] = low[curr] = time++;
+        for (int next : edgeMap.get(curr)) {
+            if (next == prev)
+                continue;
+            if (disc[next] == 0) {
+                dfs(next, curr);
+                low[curr] = Math.min(low[curr], low[next]);
+                if (low[next] > disc[curr])
+                    ans.add(Arrays.asList(curr, next));
+            } else {
+                low[curr] = Math.min(low[curr], disc[next]);
             }
         }
     }
 
     public static void main(String[] args) {
-        int[][] edges = { { 0, 1 }, { 0, 2 }, { 1, 3 }, { 1, 6 }, { 2, 4 }, { 4, 6 }, { 4, 5 }, { 5, 7 } };
+        Q5B q5B = new Q5B();
+
+        int n = 8;
+        List<List<Integer>> connections = new ArrayList<>();
+        connections.add(Arrays.asList(0, 1));
+        connections.add(Arrays.asList(0, 2));
+        connections.add(Arrays.asList(1, 3));
+        connections.add(Arrays.asList(1, 6));
+        connections.add(Arrays.asList(2, 4));
+        connections.add(Arrays.asList(4, 6));
+        connections.add(Arrays.asList(4, 5));
+        connections.add(Arrays.asList(5, 7));
+
         int targetDevice = 4;
 
-        List<Integer> impactedDevices = findImpactedDevices(edges, targetDevice);
+        List<Integer> impactedDevices = q5B.findImpactedDevices(n, connections, targetDevice);
 
-        System.out.println("Impacted Device List: " + impactedDevices);
+        System.out.println("Impacted Devices (other than target device " + targetDevice + "): " + impactedDevices);
     }
 }
