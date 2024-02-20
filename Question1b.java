@@ -22,8 +22,9 @@
 // the time cost of splitting.
 class MinimumTimeToBuildEngines {
 
+    // This method calculates the minimum time required to build engines with given parameters.
     public static int minTimeToBuildEngines(int[] engines, int splitCost) {
-        int n = engines.length;
+        int n = engines.length; // Number of engines
 
         // dp[i][j] represents the minimum time to build the first i engines with j engineers
         int[][] dp = new int[n + 1][n + 1];
@@ -40,18 +41,22 @@ class MinimumTimeToBuildEngines {
             dp[0][j] = 0;
         }
 
+        // Nested loops to fill in the dynamic programming table
         for (int i = 1; i <= n; i++) {
             for (int j = 1; j <= n; j++) {
                 // Option 1: Splitting engineers
                 for (int k = 1; k <= i; k++) {
+                    // Update dp[i][j] with the minimum of the current value and the split cost
                     dp[i][j] = Math.min(dp[i][j], Math.max(dp[k - 1][j - 1], sum(engines, k, i)) + splitCost);
                 }
             }
         }
 
+        // Return the minimum time to build all engines with n engineers
         return dp[n][n];
     }
 
+    // Helper method to calculate the sum of elements in the array from start to end
     private static int sum(int[] engines, int start, int end) {
         int result = 0;
         for (int i = start - 1; i < end; i++) {
@@ -60,12 +65,13 @@ class MinimumTimeToBuildEngines {
         return result;
     }
 
+    // Main method to test the functionality
     public static void main(String[] args) {
-        int[] engines = {1, 2, 3};
-        int splitCost = 1;
+        int[] engines = {1, 2, 3}; // Array representing time required to build each engine
+        int splitCost = 1; // Cost of splitting engineers
 
+        // Call the method to calculate and print the minimum time needed to build all engines
         int result = minTimeToBuildEngines(engines, splitCost);
         System.out.println("Minimum time needed to build all engines: " + result);
     }
 }
-

@@ -18,74 +18,128 @@
 // Output: 8
 // The goal is to Collect all key
 
+import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.Queue;
+import java.util.Set;
 
+class MazeSolver {
 
-import java.util.*;
-
-class Maze {
-    static final int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}; // Up, Down, Left, Right
-
-    public static int shortestPathAllKeys(String[] grid) {
-        int m = grid.length;
-        int n = grid[0].length();
-        Queue<Node> queue = new LinkedList<>();
-        Set<String> visited = new HashSet<>();
-        int startX = 0, startY = 0, totalKeys = 0;
-
-        // Scan the grid to find the starting point and total number of keys
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                char cell = grid[i].charAt(j);
-                if (cell == 'S') {
-                    startX = i;
-                    startY = j;
-                } else if (cell >= 'a' && cell <= 'f') {
-                    totalKeys |= (1 << (cell - 'a')); // Mark the key as needed to be collected
+    // Function to find the minimum number of moves required to collect keys 'a' to
+    // 'f'
+    public static int minMovesToCollectKeys(char[][] grid) {
+        int m = grid.length; // Number of rows in the grid
+        int n = grid[0].length; // Number of columns in the grid
+        int keysCount = 0; // Count of total keys in the maze
+        Set<Character> targetKeys = new HashSet<>(); // Set to store target keys ('a' to 'f')
+        for (char[] row : grid) {
+            for (char cell : row) {
+                if ('a' <= cell && cell <= 'f') {
+                    keysCount++; // Increment the key count for each lowercase letter 'a' to 'f'
+                    targetKeys.add(cell); // Add the lowercase letter to the set of target keys
                 }
             }
         }
 
-        queue.offer(new Node(startX, startY, 0, 0)); // Position x, y, steps, keys collected
-        visited.add(startX + "," + startY + ",0"); // Initial state
+        int[][] directions = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } }; // Possible movement directions
 
+        Set<String> visited = new HashSet<>(); // Set to track visited states during BFS
+        Queue<State> queue = new ArrayDeque<>(); // Queue for BFS
+
+        // Find the starting position 'S' and initialize the BFS queue
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                if (grid[i][j] == 'S') {
+                    queue.add(new State(i, j, 0, new HashSet<>())); // Add the starting state to the queue
+                    visited.add(i + "-" + j + "-"); // Mark the starting state as visited
+                    break;
+                }
+            }
+        }
+
+        // BFS loop
         while (!queue.isEmpty()) {
-            Node current = queue.poll();
-            if (current.keys == totalKeys) return current.steps; // Found all keys
+            State current = queue.poll(); // Dequeue the current state
 
+            // Check if all keys 'a' to 'f' are collected
+            if (current.collectedKeys.size() == keysCount) {
+                return current.steps; // Return the minimum number of steps if all keys are collected
+            }
+
+            // Explore possible next states in all directions
             for (int[] dir : directions) {
-                int newX = current.x + dir[0], newY = current.y + dir[1];
-                int newKeys = current.keys;
-                if (newX >= 0 && newX < m && newY >= 0 && newY < n) {
-                    char nextCell = grid[newX].charAt(newY);
-                    if (nextCell == 'W') continue; // Wall
-                    if (nextCell >= 'A' && nextCell <= 'F' && (newKeys & (1 << (nextCell - 'A'))) == 0) continue; // Locked door without key
-                    if (nextCell >= 'a' && nextCell <= 'f') newKeys |= (1 << (nextCell - 'a')); // Collect key
+                int nx = current.x + dir[0];
+                int ny = current.y + dir[1];
 
-                    String newState = newX + "," + newY + "," + newKeys;
-                    if (!visited.contains(newState)) {
-                        visited.add(newState);
-                        queue.offer(new Node(newX, newY, current.steps + 1, newKeys));
+                // Check if the next position is valid and not a wall
+                if (isValid(nx, ny, m, n) && grid[nx][ny] != 'W') {
+                    char cell = grid[nx][ny];
+
+                    // If the cell contains a new key 'a' to 'f', add it to the set of collected
+                    // keys
+                    if ('a' <= cell && cell <= 'f' && !current.collectedKeys.contains(cell)) {
+                        Set<Character> newCollectedKeys = new HashSet<>(current.collectedKeys);
+                        newCollectedKeys.add(cell);
+                        String newState = nx + "-" + ny + "-" + newCollectedKeys;
+                        if (!visited.contains(newState)) {
+                            queue.add(new State(nx, ny, current.steps + 1, newCollectedKeys));
+                            visited.add(newState);
+                        }
+                    }
+                    // If the cell contains a locked door 'A' to 'F' and the corresponding key is
+                    // collected, proceed
+                    else if ('A' <= cell && cell <= 'F'
+                            && current.collectedKeys.contains(Character.toLowerCase(cell))) {
+                        String newState = nx + "-" + ny + "-" + current.collectedKeys;
+                        if (!visited.contains(newState)) {
+                            queue.add(new State(nx, ny, current.steps + 1, current.collectedKeys));
+                            visited.add(newState);
+                        }
+                    }
+                    // If the cell is a path or already collected key 'a' to 'f', proceed
+                    else if (cell == 'P' || ('a' <= cell && cell <= 'f' && current.collectedKeys.contains(cell))) {
+                        String newState = nx + "-" + ny + "-" + current.collectedKeys;
+                        if (!visited.contains(newState)) {
+                            queue.add(new State(nx, ny, current.steps + 1, current.collectedKeys));
+                            visited.add(newState);
+                        }
                     }
                 }
             }
         }
 
-        return -1; // If not possible to collect all keys
+        return -1; // Return -1 if it's impossible to collect all keys 'a' to 'f' and reach the
+                   // exit
     }
 
-    static class Node {
-        int x, y, steps, keys;
+    // Function to check if a position is valid within the grid
+    private static boolean isValid(int x, int y, int m, int n) {
+        return x >= 0 && x < m && y >= 0 && y < n;
+    }
 
-        Node(int x, int y, int steps, int keys) {
+    // Class representing the state of the game
+    static class State {
+        int x, y, steps;
+        Set<Character> collectedKeys;
+
+        // Constructor for creating a new state
+        public State(int x, int y, int steps, Set<Character> collectedKeys) {
             this.x = x;
             this.y = y;
             this.steps = steps;
-            this.keys = keys;
+            this.collectedKeys = collectedKeys;
         }
     }
 
+    // Main function for testing the maze solver
     public static void main(String[] args) {
-        String[] grid = {"SPaPP", "WWWPW", "bPAPB"};
-        System.out.println("Minimum steps: " + shortestPathAllKeys(grid));
+        char[][] grid = {
+                { 'S', 'P', 'a', 'P', 'P' },
+                { 'W', 'W', 'W', 'P', 'W' },
+                { 'b', 'P', 'B', 'P', 'C' }
+        };
+
+        int result = minMovesToCollectKeys(grid);
+        System.out.println(result); // Output: 8
     }
 }
